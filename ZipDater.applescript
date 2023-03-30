@@ -5,13 +5,13 @@
 #    then update the archive's modification date to coordinate with the latest.
 #
 # Created by Toby Ziegler, April 04 2018
-# Last updated by Toby on March 23, 2023
+# Last updated by Toby on March 25, 2023
 #
 #
-# Designating this script as version 0.1
+# Designating this script as version 0.2
 #
 --current version message:
---framework for basic script
+--added zipinfo with POSIX
 
 #
 #
@@ -31,6 +31,9 @@ changeDate(selectedFile, lastModified)
 on latestDate(theArchive)
 	--confirm compressed
 	--use zipinfo terminal command to obtain contents
+	set theScript to "zipinfo " & POSIX path of theArchive
+	set theContents to do shell script theScript
+	log "Contents: " & linefeed & theContents & linefeed
 	--parse dates
 	--sort out latest date
 	--return date
@@ -53,3 +56,11 @@ tell application "Finder"
 	set theFile to (item 1 of result) as alias
 end tell
 *)
+
+(*
+References:
+using zipinfo: https://www.baeldung.com/linux/zip-list-files-without-decompressing
+*)
+
+
+
