@@ -5,19 +5,17 @@
 #    then update the archive's modification date to coordinate with the latest.
 #
 # Created by Toby Ziegler, April 04 2018
-# Last updated by Toby on March 28, 2023
+# Last updated by Toby on March 29, 2023
 #
 #
-# Designating this script as version 0.8.2
+# Designating this script as version 0.9
 #
 --current version message:
---date conversion for final change complete
---time conversion encountering difficulties
+--first fully functional version!
 #
 --still need drag and drop functionality
 --still need compression check
 --need error handling
---need change handler
 #
 #
 
@@ -30,6 +28,8 @@ choose file with prompt "Select compressed archive:"
 set selectedFile to result
 
 ### confirm compressed here?
+
+confirm(selectedFile)
 
 set theContents to loadContents(selectedFile)
 log "theContents: " & linefeed & theContents & linefeed
@@ -47,6 +47,9 @@ log "latestDate: " & linefeed & latestDate & linefeed
 
 changeDate(selectedFile, latestDate)
 
+confirm(selectedFile)
+
+
 ########### END MAIN ###########
 
 
@@ -57,7 +60,8 @@ on loadContents(theArchive)
 		
 		--use zipinfo terminal command to obtain contents
 		--use "-T" to get full decimal time, yyyymmdd.hhmmss
-		set theScript to "zipinfo -T " & POSIX path of theArchive
+		--quoted form handles spaces and othe characters
+		set theScript to "zipinfo -T " & the quoted form of the POSIX path of theArchive
 		set theContents to do shell script theScript
 		
 		return theContents
@@ -167,39 +171,57 @@ on changeDate(theFile, fixDate)
 	--arrives as a date: Monday, February 6, 2023 at 11:15:41 AM
 	--need converted to yyyymmddhhmm (.ss?)
 	
-	--set theDate to {year:yyyy, month:mm, day:dd, hour:hh, minute:min} of fixDate--fail01
-	--set {year:yyyy, month:mm, day:dd} to fixDate--fail02
-	--set theDate to (yyyy & mm as number) & dd--fail02
+	--start by converting the date
 	set {year:theYear, month:mm, day:dd} to fixDate
 	set theMonth to text -1 thru -2 of ("0" & (mm * 1))
 	set theDay to text -1 thru -2 of ("0" & dd)
 	set theDate to theYear & theMonth & theDay
 	
-	--now convert the time
+	--now load the time, then convert hour, minute, and seconds separately
 	set theTime to time of fixDate
-	set theHour to theTime / 3600 as integer
-	set theMinute to (theTime - (theHour * 3600)) / 60 as integer
-	set theSecond to theTime - (theHour * 3600) - (theMinute * 60) as integer
+	
+	set theHourBase to (theTime / 60 / 60) as string
+	set theHourOffset to the offset of "." in theHourBase
+	set theHour to text 1 thru (theHourOffset - 1) of theHourBase
+	set theHour to text -1 thru -2 of ("0" & theHour)
+	
+	set theMinuteBase to (theTime - (theHour * 3600)) / 60 as string
+	set theMinuteOffset to the offset of "." in theMinuteBase
+	set theMinute to text 1 thru (theMinuteOffset - 1) of theMinuteBase
+	set theMinute to text -1 thru -2 of ("0" & theMinute)
+	
+	set theSecond to theTime - (theHour * 3600) - (theMinute * 60) as string
+	set theSecond to text -1 thru -2 of ("0" & theSecond)
 	
 	
-	log "theDate: " & theDate
-	log "theTime: " & theTime
-	log "theHour: " & theHour
-	log "theMinute: " & theMinute
-	log "theSecond: " & theSecond
-	
-	--check:
-	--set theTime to time of date fixDate
-	--log "theTime: " & theTime
-	
-	--touch -t changes access, modification and creation dates
+	--touch -t changes access, modification and creation dates, format:
 	--touch -t yyyymmddhhmm [pathtofile][filename]
-	###set theScript to "touch -t " & fixDate & " " & theFile
-	###do shell script theScript
+	set theScript to "touch -t " & theDate & theHour & theMinute & "." & theSecond & " " & the quoted form of the POSIX path of theFile
+	do shell script theScript
 	
 end changeDate
 
 
+on confirm(theSource)
+	
+	--run shell command "stat" to confirm final system dates
+	set theCheckScript to "stat -f 'Access (atime): %Sa%nModify (mtime): %Sm%nChange (ctime): %Sc%nBirth  (Btime): %SB' " & the quoted form of the POSIX path of theSource
+	
+	set theConfirmation to do shell script theCheckScript
+	log "Confirmation: " & linefeed & theConfirmation
+	
+	(*
+	Note:
+	
+	for the stat command,
+	  atime = Access Time = when file was last opened
+	  mtime = Modify Time = when file was last changed
+	  ctime = Change Time = when file's meta was last changed, including permissions, etc.
+	  btime = Birth Time = when file first created
+	
+	*)
+	
+end confirm
 
 
 
