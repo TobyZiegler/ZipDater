@@ -1,18 +1,17 @@
 #
 # ZipDater
 #
-#
 # Applescript to search the modification dates of files in a compressed archive,
 #    then update the archive's modification date to coordinate with the latest.
 #
 # Created by Toby Ziegler, April 04 2018
-# Last updated by Toby on March 26, 2023
+# Last updated by Toby on March 27, 2023
 #
 #
-# Designating this script as version 0.4
+# Designating this script as version 0.5
 #
 --current version message:
---lengthened zipinfo command to obtain seconds also
+--changed zipinfo to -T command and started to re-do parsing
 --work in progress lots of scratching, needs a cleanup
 #
 #
@@ -40,8 +39,8 @@ changeDate(selectedFile, latestDate)
 on loadContents(theArchive)
 	try --if not zipped, file will cause an error
 		--use zipinfo terminal command to obtain contents
-		--use "-T" to get full decimal time, rewrite all the parsing!
-		set theScript to "zipinfo " & POSIX path of theArchive
+		##use "-T" to get full decimal time, rewrite all the parsing!
+		set theScript to "zipinfo -T " & POSIX path of theArchive
 		set theContents to do shell script theScript
 		log "Contents: " & linefeed & theContents & linefeed
 		
@@ -49,40 +48,45 @@ on loadContents(theArchive)
 		
 		return theDateList
 		
-	end try --try activation cascades the failure for the rest of the script! need fix
+	end try ##try activation cascades the failure for the rest of the script! need fix
 end loadContents
 
 
 on parseDates(myText)
 	
+	--specify return and linefeed delimiters to separate items from raw input:
+	set theDelimiters to AppleScript's text item delimiters --save the originals
+	
 	set AppleScript's text item delimiters to {character id 10, character id 13} --ascii return and linefeed
 	
 	set myItems to text items of myText --pull everything between each delimiter as an item in an array
 	
-	set AppleScript's text item delimiters to "" --reset delimiters, no longer needed
+	set AppleScript's text item delimiters to theDelimiters --reset delimiters, no longer needed
 	
-	set myDates to {}
+	
+	set myDates to {} --ready the array for data
+	set targetLine to {"-", "r", "w"} --only the file lines begin with permission characters
 	
 	repeat with i from 1 to the count of myItems
 		
 		set myMatch to item i of myItems
 		
-		set targetLine to {"-", "r", "w"} --only the file lines begin with permission characters
+		set targetFound to false --resets the search for each loop
 		
-		set targetFound to false
-		repeat with x from 1 to count of targetLine
+		repeat with x from 1 to count of targetLine --look for each permission character
 			try --necessary for unusual characters
 				if character 1 of myMatch is item x of targetLine then
 					set targetFound to true
+					exit repeat
 				end if
 			end try
 		end repeat
 		
+		
 		if targetFound then
-			--using a colon and grabbing the text around it is the part making this only work for the kind of data supplied
-			set colonPosition to offset of ":" in myMatch
 			
-			set thisDateString to {text (colonPosition - 12) thru (colonPosition - 4) of myMatch}
+			--only works because data is always in the same position
+			set thisDateString to text 38 thru 52 of myMatch
 			
 			--set thisDate to parseDateString(thisDateString)
 			--set dateStamp to short date string of (current date)
@@ -188,6 +192,3 @@ end tell
 References:
 using zipinfo: https://www.baeldung.com/linux/zip-list-files-without-decompressing
 *)
-
-
-
