@@ -8,10 +8,11 @@
 # Last updated by Toby on March 28, 2023
 #
 #
-# Designating this script as version 0.8.1
+# Designating this script as version 0.8.2
 #
 --current version message:
 --date conversion for final change complete
+--time conversion encountering difficulties
 #
 --still need drag and drop functionality
 --still need compression check
@@ -174,9 +175,18 @@ on changeDate(theFile, fixDate)
 	set theDay to text -1 thru -2 of ("0" & dd)
 	set theDate to theYear & theMonth & theDay
 	
+	--now convert the time
+	set theTime to time of fixDate
+	set theHour to theTime / 3600 as integer
+	set theMinute to (theTime - (theHour * 3600)) / 60 as integer
+	set theSecond to theTime - (theHour * 3600) - (theMinute * 60) as integer
 	
 	
 	log "theDate: " & theDate
+	log "theTime: " & theTime
+	log "theHour: " & theHour
+	log "theMinute: " & theMinute
+	log "theSecond: " & theSecond
 	
 	--check:
 	--set theTime to time of date fixDate
