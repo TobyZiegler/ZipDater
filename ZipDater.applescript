@@ -5,14 +5,13 @@
 #    then update the archive's modification date to coordinate with the latest.
 #
 # Created by Toby Ziegler, April 04 2018
-# Last updated by Toby on March 27, 2023
+# Last updated by Toby on March 28, 2023
 #
 #
-# Designating this script as version 0.6
+# Designating this script as version 0.7
 #
 --current version message:
---parsing re-done for zipinfo to -T command
---work in progress still, but improving
+--works through to sorting, sort next
 #
 #
 
@@ -26,10 +25,18 @@ set selectedFile to result
 
 ### confirm compressed here?
 
-set theList to loadContents(selectedFile)
-log "theList: " & linefeed & theList & linefeed
+set theContents to loadContents(selectedFile)
+log "theContents: " & linefeed & theContents & linefeed
 
-set latestDate to dateSort(theList)
+
+set rawDates to extractDates(theContents)
+log "rawDates: " & linefeed & rawDates & linefeed
+
+set theDateList to parseDateStrings(rawDates)
+log "theDateList: " & linefeed & theDateList & linefeed
+
+
+set latestDate to dateSort(theDateList)
 log "latestDate: " & linefeed & latestDate & linefeed
 
 changeDate(selectedFile, latestDate)
@@ -46,31 +53,26 @@ on loadContents(theArchive)
 		--use "-T" to get full decimal time, yyyymmdd.hhmmss
 		set theScript to "zipinfo -T " & POSIX path of theArchive
 		set theContents to do shell script theScript
-		log "Contents: " & linefeed & theContents & linefeed
 		
-		set rawDates to extractDates(theContents)
-		
-		set theDateList to parseDateStrings(rawDates)
-		
-		return theDateList
+		return theContents
 		
 	end try ### try activation cascades the failure for the rest of the script! need fix
 end loadContents
 
+
+
 on extractDates(rawList)
+	log "rawList: " & linefeed & rawList & linefeed
 	
 	--specify return and linefeed delimiters to separate items from raw input:
 	set theDelimiters to AppleScript's text item delimiters --save the originals
-	
 	set AppleScript's text item delimiters to {character id 10, character id 13} --ascii return and linefeed
-	
 	set cutList to text items of rawList --pull everything between each delimiter as an item in an array
-	
 	set AppleScript's text item delimiters to theDelimiters --reset delimiters, no longer needed
+	log "cutList: " & linefeed & cutList & linefeed
 	
 	
 	set permFlags to {"-", "r", "w"} --if another line begins r or w, error?
-	
 	set rescueDates to {}
 	
 	repeat with x from 1 to the count of cutList
@@ -78,33 +80,36 @@ on extractDates(rawList)
 		set listItem to item x of cutList
 		
 		set lineFound to false --resets the search each loop
+		set founDate to ""
 		
+		--check whether this item (line) starts with a permission flag
 		repeat with y from 1 to count of permFlags
 			try --necessary for unusual characters
-				if character 1 of listItem is item x of targetLine then
+				if character 1 of listItem is item y of permFlags then
 					set lineFound to true
 					exit repeat --no need to look further
 				end if
 			end try
 		end repeat
 		
-		
-		
+		--pull out the information and add it to the array
 		if lineFound then
-			
 			--only works because data is always in the same position
-			set founDate to text 38 thru 52 of myMatch
-			
+			set founDate to text 38 thru 52 of listItem
 			set end of rescueDates to founDate
 		end if
+		log "founDate: " & founDate
+		log "rescueDates-" & x & ": " & linefeed & rescueDates & linefeed
+		
 	end repeat
 	return rescueDates
 	
 end extractDates
 
 
+
 on parseDateStrings(myDateStrings)
-	--this takes the raw data and converts it to a list of dates
+	--this takes the raw data pulled from each line of information and converts it to a list of dates
 	
 	log "myDateStrings: " & linefeed & myDateStrings & linefeed
 	
@@ -124,15 +129,14 @@ on parseDateStrings(myDateStrings)
 		
 		set dateString to theMonth & "/" & theDay & "/" & theYear
 		
-		set myDate to date dateString --unable to add date and time together
+		set myDate to date dateString --unable to add date and time together, this works for the first half
 		
-		--quirky thing doesn't work if multiply by seconds, just add them raw
+		--quirky thing doesn't work if multiply by seconds like the others, just add seconds raw
 		set time of myDate to (theHour * hours + theMinute * minutes + theSecond)
 		
 		set end of myDates to myDate
 		
 	end repeat
-	
 	return myDates
 	
 end parseDateStrings
@@ -141,13 +145,21 @@ end parseDateStrings
 
 
 on dateSort(theDates)
-	--sort out latest date
-	--return date
+	log "theDates: " & theDates
 	
-	set theLastTime to "Insert function here."
+	set thisDate to ""
 	
-	--set theLastTime to item 1 of theDates
-	return theLastTime
+	repeat with z from 1 to the (count of theDates) - 1
+		set thisDate to item z of theDates
+		set nextDate to (item z) + 1
+		if thisDate comes after nextDate then
+			set thisDate to nextDate
+		end if
+		log "thisDate-" & z & ": " & thisDate
+	end repeat
+	log "Final Date: " & thisDate
+	
+	return thisDate
 end dateSort
 
 
@@ -162,3 +174,6 @@ end changeDate
 References:
 using zipinfo: https://www.baeldung.com/linux/zip-list-files-without-decompressing
 *)
+
+
+
