@@ -8,10 +8,14 @@
 # Last updated by Toby on March 28, 2023
 #
 #
-# Designating this script as version 0.7
+# Designating this script as version 0.8
 #
 --current version message:
---works through to sorting, sort next
+--sort works, need to doublecheck accuracy
+--still need drag and drop functionality
+--still need compression check
+--need error handling
+--need change handler
 #
 #
 
@@ -62,14 +66,12 @@ end loadContents
 
 
 on extractDates(rawList)
-	log "rawList: " & linefeed & rawList & linefeed
 	
 	--specify return and linefeed delimiters to separate items from raw input:
 	set theDelimiters to AppleScript's text item delimiters --save the originals
 	set AppleScript's text item delimiters to {character id 10, character id 13} --ascii return and linefeed
 	set cutList to text items of rawList --pull everything between each delimiter as an item in an array
 	set AppleScript's text item delimiters to theDelimiters --reset delimiters, no longer needed
-	log "cutList: " & linefeed & cutList & linefeed
 	
 	
 	set permFlags to {"-", "r", "w"} --if another line begins r or w, error?
@@ -98,8 +100,6 @@ on extractDates(rawList)
 			set founDate to text 38 thru 52 of listItem
 			set end of rescueDates to founDate
 		end if
-		log "founDate: " & founDate
-		log "rescueDates-" & x & ": " & linefeed & rescueDates & linefeed
 		
 	end repeat
 	return rescueDates
@@ -110,8 +110,6 @@ end extractDates
 
 on parseDateStrings(myDateStrings)
 	--this takes the raw data pulled from each line of information and converts it to a list of dates
-	
-	log "myDateStrings: " & linefeed & myDateStrings & linefeed
 	
 	set myDates to {}
 	
@@ -145,21 +143,20 @@ end parseDateStrings
 
 
 on dateSort(theDates)
-	log "theDates: " & theDates
+	### sort may not be correct, test soon
 	
-	set thisDate to ""
+	set lastDate to false
 	
-	repeat with z from 1 to the (count of theDates) - 1
+	repeat with z from 1 to the count of theDates
 		set thisDate to item z of theDates
-		set nextDate to (item z) + 1
-		if thisDate comes after nextDate then
-			set thisDate to nextDate
+		if lastDate is false then
+			set lastDate to thisDate
+		else if thisDate is greater than lastDate then
+			set lastDate to thisDate
 		end if
-		log "thisDate-" & z & ": " & thisDate
 	end repeat
-	log "Final Date: " & thisDate
 	
-	return thisDate
+	return lastDate
 end dateSort
 
 
@@ -174,6 +171,3 @@ end changeDate
 References:
 using zipinfo: https://www.baeldung.com/linux/zip-list-files-without-decompressing
 *)
-
-
-
