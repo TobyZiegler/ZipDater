@@ -1,6 +1,7 @@
 #
 # ZipDater
 #
+#
 # Applescript to search the modification dates of files in a compressed archive,
 #    then update the archive's modification date to coordinate with the latest.
 #
@@ -8,13 +9,11 @@
 # Last updated by Toby on March 26, 2023
 #
 #
-# Designating this script as version 0.3
+# Designating this script as version 0.4
 #
 --current version message:
---added logs to better follow the data and processes
---moved zipinfo to loadContents handler
---added parseDates to pull dates from the data
---dummy data in dateSort
+--lengthened zipinfo command to obtain seconds also
+--work in progress lots of scratching, needs a cleanup
 #
 #
 
@@ -41,6 +40,7 @@ changeDate(selectedFile, latestDate)
 on loadContents(theArchive)
 	try --if not zipped, file will cause an error
 		--use zipinfo terminal command to obtain contents
+		--use "-T" to get full decimal time, rewrite all the parsing!
 		set theScript to "zipinfo " & POSIX path of theArchive
 		set theContents to do shell script theScript
 		log "Contents: " & linefeed & theContents & linefeed
@@ -48,7 +48,8 @@ on loadContents(theArchive)
 		set theDateList to parseDates(theContents)
 		
 		return theDateList
-	end try --try activation cascades the failure for the rest of the script
+		
+	end try --try activation cascades the failure for the rest of the script! need fix
 end loadContents
 
 
@@ -68,20 +69,50 @@ on parseDates(myText)
 		
 		set targetLine to {"-", "r", "w"} --only the file lines begin with permission characters
 		
+		set targetFound to false
 		repeat with x from 1 to count of targetLine
-			
 			try --necessary for unusual characters
 				if character 1 of myMatch is item x of targetLine then
-					
-					--using a colon and grabbing the text around it is the part making this only work for the kind of data supplied
-					set colonPosition to offset of ":" in myMatch
-					
-					set thisDate to {text (colonPosition - 12) thru (colonPosition + 2) of myMatch}
-					
-					set end of myDates to thisDate
+					set targetFound to true
 				end if
 			end try
 		end repeat
+		
+		if targetFound then
+			--using a colon and grabbing the text around it is the part making this only work for the kind of data supplied
+			set colonPosition to offset of ":" in myMatch
+			
+			set thisDateString to {text (colonPosition - 12) thru (colonPosition - 4) of myMatch}
+			
+			--set thisDate to parseDateString(thisDateString)
+			--set dateStamp to short date string of (current date)
+			--log "dateStamp: " & dateStamp
+			
+			(*
+					set thisYearString to {text (colonPosition - 12) thru (colonPosition - 11) of myMatch}
+					set thisMonthString to {text (colonPosition - 9) thru (colonPosition - 7) of myMatch}
+					set thisDayString to {text (colonPosition - 5) thru (colonPosition - 4) of myMatch}
+					
+					set thisHourString to {text (colonPosition - 2) thru (colonPosition - 1) of myMatch}
+					set thisMinuteString to {text (colonPosition + 1) thru (colonPosition + 2) of myMatch}
+					
+					set thisDate to date {thisYearString, thisMonthString, thisDayString, thisHourString, thisMinuteString}
+					log "thisDate: " & thisDate
+					*)
+			
+			--probably better to coerce string to date & time here instead
+			
+			--log "thisDateString: " & thisDateString
+			--log "thisTimeString: " & thisTimeString
+			
+			--set thisDate to date thisDateString
+			--set thisTime to date thisTimeString
+			
+			--log "thisDate: " & thisDate
+			--log "thisTime: " & thisTime
+			
+			set end of myDates to thisDateString
+		end if
 	end repeat
 	
 	return myDates
@@ -89,8 +120,44 @@ on parseDates(myText)
 end parseDates
 
 
+-- Parse date and time from the string given in the email.
+on parseDateString(datestring)
+	set theDate to current date
+	--set dateWords to words of datestring
+	--log "dateWords: " & dateWords
+	
+	
+	set year of theDate to text 1 thru 2 of datestring
+	log "add year: " & theDate
+	
+	set month of theDate to text 4 thru 6 of datestring
+	log "add month: " & theDate
+	
+	set day of theDate to text 8 thru 9 of datestring
+	log "add day: " & theDate
+	
+	set time of theDate to (text 11 thru 12 of datestring) * hours + (text 14 thru 15 of datestring) * minutes
+	log "add time: " & theDate
+	
+	
+	(*
+    set monthList to {January, February, March, April, May, June, July, August, September, October, November, December}
+    repeat with i from 1 to 12
+        if item 3 of dateWords = ((item i of monthList) as string) then
+            set monthNumber to (text -2 thru -1 of ("0" & i))
+            exit repeat
+        end if
+    end repeat
+    set month of theDate to monthNumber
+	
+	*)
+	return theDate
+end parseDateString
+
+
+
+
 on dateSort(theDates)
-	--parse dates
 	--sort out latest date
 	--return date
 	set theLastTime to item 1 of theDates
@@ -121,4 +188,6 @@ end tell
 References:
 using zipinfo: https://www.baeldung.com/linux/zip-list-files-without-decompressing
 *)
+
+
 
