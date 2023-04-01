@@ -8,10 +8,11 @@
 # Last updated by Toby on March 28, 2023
 #
 #
-# Designating this script as version 0.8
+# Designating this script as version 0.8.1
 #
 --current version message:
---sort works, need to doublecheck accuracy
+--date conversion for final change complete
+#
 --still need drag and drop functionality
 --still need compression check
 --need error handling
@@ -160,10 +161,37 @@ on dateSort(theDates)
 end dateSort
 
 
-
-on changeDate(theFile, theDate)
-	--update theFile to theDate
+on changeDate(theFile, fixDate)
+	
+	--arrives as a date: Monday, February 6, 2023 at 11:15:41 AM
+	--need converted to yyyymmddhhmm (.ss?)
+	
+	--set theDate to {year:yyyy, month:mm, day:dd, hour:hh, minute:min} of fixDate--fail01
+	--set {year:yyyy, month:mm, day:dd} to fixDate--fail02
+	--set theDate to (yyyy & mm as number) & dd--fail02
+	set {year:theYear, month:mm, day:dd} to fixDate
+	set theMonth to text -1 thru -2 of ("0" & (mm * 1))
+	set theDay to text -1 thru -2 of ("0" & dd)
+	set theDate to theYear & theMonth & theDay
+	
+	
+	
+	log "theDate: " & theDate
+	
+	--check:
+	--set theTime to time of date fixDate
+	--log "theTime: " & theTime
+	
+	--touch -t changes access, modification and creation dates
+	--touch -t yyyymmddhhmm [pathtofile][filename]
+	###set theScript to "touch -t " & fixDate & " " & theFile
+	###do shell script theScript
+	
 end changeDate
+
+
+
+
 
 
 
